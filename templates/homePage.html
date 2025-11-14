@@ -1,0 +1,1095 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MultiDom RAG</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <link rel="stylesheet" href="style.css" />
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: {
+                dark: "#579be8",
+                light: "#3B82F6",
+              },
+              secondary: {
+                dark: "#9F1239",
+                light: "#EC4899",
+              },
+              accent: {
+                dark: "#047857",
+                light: "#10B981",
+              },
+              dark: {
+                900: "#0F172A",
+                800: "#1E293B",
+                700: "#334155",
+                600: "#475569",
+              },
+            },
+            fontFamily: {
+              sans: ["Inter", "sans-serif"],
+              mono: ["Fira Code", "monospace"],
+            },
+            animation: {
+              float: "float 6s ease-in-out infinite",
+              "float-fast": "float 4s ease-in-out infinite",
+              "spin-slow": "spin 10s linear infinite",
+              "pulse-slow": "pulse 5s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+              "bounce-slow": "bounce 3s infinite",
+              wiggle: "wiggle 1s ease-in-out infinite",
+              wave: "wave 2s linear infinite",
+              blink: "blink 1.5s step-end infinite",
+            },
+            keyframes: {
+              float: {
+                "0%, 100%": { transform: "translateY(0)" },
+                "50%": { transform: "translateY(-10px)" },
+              },
+              wiggle: {
+                "0%, 100%": { transform: "rotate(-3deg)" },
+                "50%": { transform: "rotate(3deg)" },
+              },
+              wave: {
+                "0%": { transform: "rotate(0deg)" },
+                "10%": { transform: "rotate(14deg)" },
+                "20%": { transform: "rotate(-8deg)" },
+                "30%": { transform: "rotate(14deg)" },
+                "40%": { transform: "rotate(-4deg)" },
+                "50%": { transform: "rotate(10deg)" },
+                "60%": { transform: "rotate(0deg)" },
+                "100%": { transform: "rotate(0deg)" },
+              },
+              blink: {
+                "0%, 100%": { opacity: "1" },
+                "50%": { opacity: "0" },
+              },
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap");
+
+      body {
+        font-family: "Inter", sans-serif;
+        transition: all 0.3s ease;
+        scroll-behavior: smooth;
+      }
+
+      .gradient-bg {
+        background: linear-gradient(
+          135deg,
+          #1e40af 0%,
+          #9f1239 50%,
+          #047857 100%
+        );
+      }
+
+      .card-hover {
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+      }
+
+      .card-hover:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3),
+          0 10px 10px -5px rgba(0, 0, 0, 0.1);
+      }
+
+      .pulse-animation {
+        animation: pulse 2s infinite;
+      }
+
+      @keyframes pulse {
+        0% {
+          box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
+        }
+        70% {
+          box-shadow: 0 0 0 10px rgba(59, 130, 246, 0);
+        }
+        100% {
+          box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+        }
+      }
+
+      .chat-bubble {
+        border-radius: 1.5rem;
+        position: relative;
+      }
+
+      .chat-bubble:after {
+        content: "";
+        position: absolute;
+        bottom: 0;
+        left: 20%;
+        width: 0;
+        height: 0;
+        border: 10px solid transparent;
+        border-top-color: #3b82f6;
+        border-bottom: 0;
+        margin-left: -10px;
+        margin-bottom: -10px;
+      }
+
+      .dark .chat-bubble:after {
+        border-top-color: #1e40af;
+      }
+
+      .glow {
+        filter: drop-shadow(0 0 8px currentColor);
+      }
+
+      .feature-icon {
+        transition: all 0.3s ease;
+      }
+
+      .feature-card:hover .feature-icon {
+        transform: scale(1.2) rotate(10deg);
+      }
+
+      .swarm-particle {
+        position: absolute;
+        border-radius: 50%;
+        opacity: 0.7;
+        animation: swarm-move 15s linear infinite;
+      }
+
+      @keyframes swarm-move {
+        0%,
+        100% {
+          transform: translate(0, 0);
+        }
+        25% {
+          transform: translate(20px, 20px);
+        }
+        50% {
+          transform: translate(10px, -20px);
+        }
+        75% {
+          transform: translate(-20px, 10px);
+        }
+      }
+
+      .typing-indicator {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .typing-dot {
+        width: 8px;
+        height: 8px;
+        margin: 0 2px;
+        background-color: currentColor;
+        border-radius: 50%;
+        display: inline-block;
+        animation: typing-dot 1.4s infinite ease-in-out;
+      }
+
+      .typing-dot:nth-child(1) {
+        animation-delay: 0s;
+      }
+
+      .typing-dot:nth-child(2) {
+        animation-delay: 0.2s;
+      }
+
+      .typing-dot:nth-child(3) {
+        animation-delay: 0.4s;
+      }
+
+      @keyframes typing-dot {
+        0%,
+        60%,
+        100% {
+          transform: translateY(0);
+        }
+        30% {
+          transform: translateY(-5px);
+        }
+      }
+
+      .progress-bar {
+        height: 4px;
+        width: 0;
+        background: linear-gradient(90deg, #3b82f6, #ec4899, #10b981);
+        transition: width 0.4s ease;
+      }
+
+      .scroll-indicator {
+        position: fixed;
+        bottom: 30px;
+        right: 30px;
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background-color: #3b82f6;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        opacity: 0;
+        transform: translateY(20px);
+        transition: all 0.3s ease;
+        z-index: 999;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      }
+
+      .scroll-indicator.visible {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      .scroll-indicator:hover {
+        transform: translateY(-5px) scale(1.1);
+        box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+      }
+
+      .tooltip {
+        position: relative;
+      }
+
+      .tooltip-text {
+        visibility: hidden;
+        width: 120px;
+        background-color: #1e293b;
+        color: #fff;
+        text-align: center;
+        border-radius: 6px;
+        padding: 5px;
+        position: absolute;
+        z-index: 1;
+        bottom: 125%;
+        left: 50%;
+        margin-left: -60px;
+        opacity: 0;
+        transition: opacity 0.3s;
+      }
+
+      .tooltip:hover .tooltip-text {
+        visibility: visible;
+        opacity: 1;
+      }
+
+      .parallax {
+        background-attachment: fixed;
+        background-position: center;
+        background-repeat: no-repeat;
+        background-size: cover;
+      }
+
+      .floating-label {
+        position: relative;
+        margin-bottom: 20px;
+      }
+
+      .floating-label input,
+      .floating-label textarea {
+        font-size: 16px;
+        padding: 20px 16px 10px;
+        display: block;
+        width: 100%;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        background: #f8fafc;
+      }
+
+      .floating-label input:focus,
+      .floating-label textarea:focus {
+        outline: none;
+        border-color: #3b82f6;
+      }
+
+      .floating-label label {
+        color: #64748b;
+        font-size: 16px;
+        position: absolute;
+        pointer-events: none;
+        left: 16px;
+        top: 16px;
+        transition: 0.2s ease all;
+      }
+
+      .floating-label input:focus ~ label,
+      .floating-label input:valid ~ label,
+      .floating-label textarea:focus ~ label,
+      .floating-label textarea:valid ~ label {
+        top: 6px;
+        font-size: 12px;
+        color: #3b82f6;
+      }
+
+      .dark .floating-label input,
+      .dark .floating-label textarea {
+        background: #1e293b;
+        border-color: #334155;
+        color: #f8fafc;
+      }
+
+      .dark .floating-label label {
+        color: #94a3b8;
+      }
+
+      .dark .floating-label input:focus ~ label,
+      .dark .floating-label input:valid ~ label,
+      .dark .floating-label textarea:focus ~ label,
+      .dark .floating-label textarea:valid ~ label {
+        color: #60a5fa;
+      }
+
+      .toggle-switch {
+        position: relative;
+        display: inline-block;
+        width: 60px;
+        height: 34px;
+      }
+
+      .toggle-switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+
+      .toggle-slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #cbd5e1;
+        transition: 0.4s;
+        border-radius: 34px;
+      }
+
+      .toggle-slider:before {
+        position: absolute;
+        content: "";
+        height: 26px;
+        width: 26px;
+        left: 4px;
+        bottom: 4px;
+        background-color: white;
+        transition: 0.4s;
+        border-radius: 50%;
+      }
+
+      input:checked + .toggle-slider {
+        background-color: #3b82f6;
+      }
+
+      input:checked + .toggle-slider:before {
+        transform: translateX(26px);
+      }
+
+      .ripple {
+        position: relative;
+        overflow: hidden;
+      }
+
+      .ripple-effect {
+        position: absolute;
+        border-radius: 50%;
+        background-color: rgba(255, 255, 255, 0.4);
+        transform: scale(0);
+        animation: ripple 0.6s linear;
+        pointer-events: none;
+      }
+
+      @keyframes ripple {
+        to {
+          transform: scale(4);
+          opacity: 0;
+        }
+      }
+
+      .scroll-progress {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 0%;
+        height: 4px;
+        background: linear-gradient(90deg, #3b82f6, #ec4899, #10b981);
+        z-index: 1000;
+        transition: width 0.1s;
+      }
+
+      .confetti {
+        position: fixed;
+        width: 10px;
+        height: 10px;
+        background-color: #3b82f6;
+        opacity: 0;
+        z-index: 9999;
+        animation: confetti-fall 5s linear forwards;
+      }
+
+      @keyframes confetti-fall {
+        0% {
+          transform: translateY(-100px) rotate(0deg);
+          opacity: 1;
+        }
+        100% {
+          transform: translateY(100vh) rotate(360deg);
+          opacity: 0;
+        }
+      }
+      .hero-slide {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        opacity: 0;
+        transition: opacity 1.5s ease-in-out;
+        /* This animation adds a subtle zoom effect to the images */
+        animation: kenBurns 15s ease-out forwards;
+      }
+
+      .hero-slide.active {
+        opacity: 1;
+      }
+
+      @keyframes kenBurns {
+        0% {
+          transform: scale(1.1);
+        }
+        100% {
+          transform: scale(1);
+        }
+      }
+    </style>
+  </head>
+  <body
+    class="bg-gray-100 dark:bg-dark-900 text-gray-800 dark:text-gray-200 min-h-screen"
+  >
+    <!-- Scroll Progress Bar -->
+    <div class="scroll-progress"></div>
+
+    <!-- Navigation -->
+    <nav class="bg-white dark:bg-dark-800 shadow-lg sticky top-0 z-50">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between h-16 items-center relative">
+          <div class="flex items-center">
+            <i
+              class="fa-solid fa-file-medical text-primary-light dark:text-primary-dark text-2xl mr-5"
+            ></i>
+            <span
+              class="text-2xl font-bold text-primary-light dark:text-primary-dark"
+              >MultiDom RAG</span
+            >
+          </div>
+          <div class="hidden sm:flex flex-1 justify-center space-x-8">
+            <a
+              href="{{ url_for('homePage') }}"
+              class="border-primary-light dark:border-primary-dark text-gray-900 dark:text-white inline-flex items-center px-1 pt-1 border-b-2 text-sm text-xl hover:animate-pulse"
+              >Home</a
+            >
+
+            <div class="relative group">
+              <button
+                class="border-transparent text-gray-500 dark:text-gray-400 hover:border-gray-300 hover:text-gray-700 dark:hover:text-gray-300 inline-flex items-center px-1 pt-1 border-b-2 text-sm text-xl hover:animate-pulse"
+              >
+                Demo
+                <svg
+                  class="w-4 h-4 ml-1"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M19 9l-7 7-7-7"
+                  ></path>
+                </svg>
+              </button>
+
+              <!-- Dropdown menu -->
+              <div
+                class="absolute left-1/2 transform -translate-x-1/2 mt-2 w-48 rounded-md shadow-lg bg-white dark:bg-dark-700 ring-1 ring-black ring-opacity-5 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 ease-in-out z-50"
+              >
+                <div class="py-1" role="menu" aria-orientation="vertical">
+                  <a
+                    href="{{ url_for('medical_page') }}"
+                    class="block px-4 py-2 text-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-dark-600"
+                    role="menuitem"
+                    >Medical</a
+                  >
+                  <a
+                    href="{{ url_for('islamic_page') }}"
+                    class="block px-4 py-2 text-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-dark-600"
+                    role="menuitem"
+                    >Islamic</a
+                  >
+                  <a
+                    href="{{ url_for('insurance_page') }}"
+                    class="block px-4 py-2 text-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-dark-600"
+                    role="menuitem"
+                    >Insurance</a
+                  >
+                </div>
+              </div>
+            </div>
+
+            <a
+              href="{{ url_for('about') }}"
+              class="border-transparent text-gray-500 dark:text-gray-400 hover:border-gray-300 hover:text-gray-700 dark:hover:text-gray-300 inline-flex items-center px-1 pt-1 border-b-2 text-sm text-xl hover:animate-pulse"
+              >About</a
+            >
+          </div>
+
+          <div class="hidden sm:flex items-center space-x-4">
+            <button
+              id="theme-toggle"
+              type="button"
+              class="p-1 rounded-full text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-light dark:focus:ring-primary-dark ripple"
+            >
+              <i class="fas fa-moon dark:hidden"></i>
+              <i class="fas fa-sun hidden dark:block"></i>
+            </button>
+            <button
+              onclick="window.location.href = '{{ url_for('medical_page') }}'"
+              class="ml-4 bg-primary-light dark:bg-primary-dark hover:bg-primary-dark dark:hover:bg-primary-light text-white px-4 py-2 rounded-md text-sm font-medium transition duration-300 hover:scale-105 transform ripple"
+            >
+              Try Demo
+            </button>
+          </div>
+          <div class="-mr-2 flex items-center sm:hidden">
+            <button
+              type="button"
+              class="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary-light dark:focus:ring-primary-dark ripple"
+              aria-controls="mobile-menu"
+              aria-expanded="false"
+            >
+              <span class="sr-only">Open main menu</span>
+              <i class="fas fa-bars"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Wrapper for the hero section to create white space on the sides -->
+    <div class="bg-gray-100 px-4 py-4 dark:bg-dark-900">
+      <!-- New Hero Section (Constrained width and centered) -->
+      <div
+        id="home"
+        class="relative h-[70vh] max-w-8xl mx-auto flex items-center justify-center text-center text-white overflow-hidden rounded-xl shadow-2xl"
+      >
+        <!-- Slideshow Container -->
+        <!-- This container will now fill its parent -->
+        <div id="hero-slideshow" class="absolute inset-0 w-full h-full z-0">
+          <!-- Slide 1: Medical -->
+          <img
+            src="https://apicms.thestar.com.my/uploads/images/2019/11/20/397347.jpg"
+            alt="MedicalBg"
+            class="hero-slide active object-top"
+          />
+          <!-- Slide 2: Islamic -->
+          <img
+            src="https://images.unsplash.com/photo-1579305796288-c534f6cf17ab?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTR8fG1lY2NhJTIwa2FhYmF8ZW58MHx8MHx8fDA%3D&fm=jpg&q=60&w=3000"
+            alt="IslamicBg"
+            class="hero-slide object-center"
+          />
+          <!-- Slide 3: Insurance -->
+          <img
+            src="https://www.worldfinance.com/wp-content/uploads/2015/01/Etiqa-Insurance.jpg"
+            alt="InsuranceBg"
+            class="hero-slide object-top"
+          />
+        </div>
+
+        <!-- Dark Overlay -->
+        <div class="absolute inset-0 bg-black/65 z-10"></div>
+
+        <!-- Centered Content (Adjusted for new height) -->
+        <div class="relative z-20 px-4 animate-fade-in">
+          <h1
+            class="text-4xl font-extrabold tracking-tight sm:text-5xl md:text-6xl"
+          >
+            <span class="block">Multimodal Swarm-Based RAG</span>
+            <span class="block text-blue-400 mt-2">for Domains Specific</span>
+          </h1>
+          <p
+            class="mt-4 max-w-2xl mx-auto text-lg text-gray-200 sm:text-xl md:mt-6"
+          >
+            A versatile, multi-agent system combining text and images to provide
+            deep, accurate, and context-aware information for a wide range of
+            fields.
+          </p>
+          <div class="mt-8 flex justify-center gap-4">
+            <a
+              href="{{ url_for('medical_page') }}"
+              class="px-8 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-700 hover:bg-blue-800 md:text-lg transition-transform transform hover:scale-105"
+            >
+              Get Started
+            </a>
+            <a
+              href="{{ url_for('about') }}"
+              class="px-8 py-3 border border-transparent text-base font-medium rounded-md text-primary bg-primary hover:bg-blue-200 hover:text-blue-800 md:text-lg transition-transform transform hover:scale-105"
+            >
+              Learn More
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- START: New Domains Section -->
+    <div id="domains" class="py-16 bg-white dark:bg-dark-900">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="lg:text-center sm:text-center">
+          <h2
+            class="text-base text-primary-light dark:text-primary-dark font-semibold tracking-wide uppercase"
+          >
+            Domains
+          </h2>
+          <p
+            class="mt-2 text-3xl leading-8 font-extrabold tracking-tight text-gray-900 dark:text-white sm:text-4xl"
+          >
+            Multiple Fields of Expertise
+          </p>
+          <p
+            class="mt-4 max-w-3xl text-xl text-gray-500 dark:text-gray-400 lg:mx-auto"
+          >
+            Our RAG system is trained to navigate the unique terminologies and
+            complex data of distinct, high-stakes domains. Click any domain to
+            try the demo.
+          </p>
+        </div>
+
+        <div class="mt-16 grid grid-cols-1 md:grid-cols-3 gap-20">
+          <!-- Domain 1: Medical -->
+          <a
+            href="{{ url_for('medical_page') }}"
+            class="block rounded-lg shadow-lg bg-white dark:bg-dark-800 overflow-hidden transition-all duration-300 ease-in-out hover:shadow-2xl hover:shadow-primary-light/20 dark:hover:shadow-primary-dark/20 hover:-translate-y-2"
+          >
+            <img
+              class="w-full h-48 object-cover"
+              src="https://www.malaymail.com/malaymail/uploads/images/2023/09/05/144179.jpg"
+              alt="Medical Domain"
+            />
+            <div class="p-6">
+              <div class="flex items-center space-x-3">
+                <i
+                  class="fa-solid fa-heart-pulse text-2xl text-primary-light dark:text-primary-dark"
+                ></i>
+                <h3 class="text-xl font-semibold text-gray-900 dark:text-white">
+                  Medical
+                </h3>
+              </div>
+              <p class="mt-3 text-base text-gray-500 dark:text-gray-400">
+                Analyze medical records, and diagnostic images with high
+                accuracy.
+              </p>
+            </div>
+          </a>
+
+          <!-- Domain 2: Islamic -->
+          <a
+            href="{{ url_for('islamic_page') }}"
+            class="block rounded-lg shadow-lg bg-white dark:bg-dark-800 overflow-hidden transition-all duration-300 ease-in-out hover:shadow-2xl hover:shadow-accent-light/20 dark:hover:shadow-accent-dark/20 hover:-translate-y-2"
+          >
+            <img
+              class="w-full h-48 object-cover"
+              src="https://c7c8edde.rocketcdn.me/wp-content/uploads/mishary-alafasy-svnLIZ6jgCQ-unsplash-scaled.jpg"
+              alt="Islamic Domain"
+            />
+            <div class="p-6">
+              <div class="flex items-center space-x-3">
+                <i
+                  class="fa-solid fa-moon text-2xl text-accent-light dark:text-accent-dark"
+                ></i>
+                <h3 class="text-xl font-semibold text-gray-900 dark:text-white">
+                  Islamic
+                </h3>
+              </div>
+              <p class="mt-3 text-base text-gray-500 dark:text-gray-400">
+                Retrieve and synthesize knowledge from vast libraries of
+                historical texts and scholarly interpretations.
+              </p>
+            </div>
+          </a>
+
+          <!-- Domain 3: Insurance -->
+          <a
+            href="{{ url_for('insurance_page') }}"
+            class="block rounded-lg shadow-lg bg-white dark:bg-dark-800 overflow-hidden transition-all duration-300 ease-in-out hover:shadow-2xl hover:shadow-secondary-light/20 dark:hover:shadow-secondary-dark/20 hover:-translate-y-2"
+          >
+            <img
+              class="w-full h-48 object-bottom"
+              src="https://theedgemalaysia.com/_next/image?url=https%3A%2F%2Fassets.theedgemarkets.com%2FEtiqa_TEM1464_20230321165006_theedgemarkets.jpg&w=1920&q=75"
+              alt="Insurance Domain"
+            />
+            <div class="p-6">
+              <div class="flex items-center space-x-3">
+                <i
+                  class="fa-solid fa-shield-halved text-2xl text-amber-400 dark:text-amber-400"
+                ></i>
+                <h3 class="text-xl font-semibold text-gray-900 dark:text-white">
+                  Insurance
+                </h3>
+              </div>
+              <p class="mt-3 text-base text-gray-500 dark:text-gray-400">
+                Process claims, analyze policy documents, and assess risk with
+                multimodal data inputs.
+              </p>
+            </div>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Features Section -->
+    <div
+      id="features"
+      class="sm:text-center py-12 bg-gray-100 dark:bg-dark-800"
+    >
+      <div class="sm:text-center max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="lg:text-center">
+          <h2
+            class="text-base text-primary-light dark:text-primary-dark font-semibold tracking-wide uppercase"
+          >
+            Features
+          </h2>
+          <p
+            class="mt-2 text-3xl leading-8 font-extrabold tracking-tight text-gray-900 dark:text-white sm:text-4xl"
+          >
+            Advanced Information Retrieval System
+          </p>
+          <p
+            class="mt-4 max-w-2xl text-xl text-gray-500 dark:text-gray-400 lg:mx-auto"
+          >
+            Our system combines cutting-edge technologies to deliver
+            comprehensive insights across all fields.
+          </p>
+        </div>
+        
+        <div class="mt-10">
+          <div
+            class="space-y-5"
+          >
+            <div
+              class="relative card-hover bg-white dark:bg-dark-700 p-6 rounded-lg shadow-lg feature-card"
+            >
+              <div
+                class="absolute -top-6 left-6 rounded-full p-4 bg-primary-light dark:bg-primary-dark text-white feature-icon animate-float"
+              >
+                <i class="fas fa-robot text-xl"></i>
+              </div>
+              <h3
+                class="mt-2 text-xl leading-6 font-medium text-gray-900 dark:text-white"
+              >
+                Swarm-Based Multi-Agent System
+              </h3>
+              <p class="mt-2 text-base text-gray-500 dark:text-gray-400">
+                Specialized agents collaboratively query diverse knowledge
+                bases from medical databases to classical Islamic texts to
+                retrieve and synthesize the most relevant information.
+              </p>
+            </div>
+
+            <div
+              class="relative card-hover bg-white dark:bg-dark-700 p-6 rounded-lg shadow-lg feature-card"
+            >
+              <div
+                class="absolute -top-6 left-6 rounded-full p-4 bg-secondary-light dark:bg-secondary-dark text-white feature-icon animate-float"
+                style="animation-delay: 1s"
+              >
+                <i class="fas fa-images text-xl animate-wiggle"></i>
+              </div>
+              <h3
+                class="mt-2 text-xl leading-6 font-medium text-gray-900 dark:text-white"
+              >
+                Multimodal Integration
+              </h3>
+              <p class="mt-2 text-base text-gray-500 dark:text-gray-400">
+                Processes both textual and visual data, including research
+                papers, notes, image, and documents for comprehensive
+                analysis.
+              </p>
+            </div>
+
+            <div
+              class="relative card-hover bg-white dark:bg-dark-700 p-6 rounded-lg shadow-lg feature-card"
+            >
+              <div
+                class="absolute -top-6 left-6 rounded-full p-4 bg-accent-light dark:bg-accent-dark text-white feature-icon animate-float"
+                style="animation-delay: 2s"
+              >
+                <i class="fas fa-book-medical text-xl animate-wave"></i>
+              </div>
+              <h3
+                class="mt-2 text-xl leading-6 font-medium text-gray-900 dark:text-white"
+              >
+                Retrieval-Augmented Generation
+              </h3>
+              <p class="mt-2 text-base text-gray-500 dark:text-gray-400">
+                Combines information retrieval with generative AI to provide
+                accurate, context-aware answers with verifiable citations
+                from both medical journals and scholarly Islamic sources.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- Technology Stack -->
+    <div class="sm:text-center py-12 bg-gray-50 dark:bg-dark-900">
+      <div class="sm:text-center max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="lg:text-center">
+          <h2
+            class="text-base text-primary-light dark:text-primary-dark font-semibold tracking-wide uppercase"
+          >
+            Technology Stack
+          </h2>
+          <p
+            class="mt-2 text-3xl leading-8 font-extrabold tracking-tight text-gray-900 dark:text-white sm:text-4xl"
+          >
+            Powered by Cutting-Edge Technologies
+          </p>
+        </div>
+
+        <div class="mt-10 grid grid-cols-2 gap-8 md:grid-cols-4">
+          <div class="col-span-1 flex justify-center">
+            <div class="flex items-center">
+              <i
+                class="fab fa-python text-5xl text-blue-500 mr-3 animate-float"
+                style="animation-delay: 0s"
+              ></i>
+              <span class="text-lg font-medium text-gray-900 dark:text-white"
+                >Flask</span
+              >
+            </div>
+          </div>
+          <div class="col-span-1 flex justify-center">
+            <div class="flex items-center">
+              <i
+                class="fa-solid fa-users-between-lines text-5xl text-purple-500 mr-3 animate-float"
+                style="animation-delay: 0.5s"
+              ></i>
+              <span class="text-lg font-medium text-gray-900 dark:text-white"
+                >Swarm-Based Agent</span
+              >
+            </div>
+          </div>
+          <div class="col-span-1 flex justify-center">
+            <div class="flex items-center">
+              <i
+                class="fas fa-database text-5xl text-green-500 mr-3 animate-float"
+                style="animation-delay: 1s"
+              ></i>
+              <span class="text-lg font-medium text-gray-900 dark:text-white"
+                >ChromaDB</span
+              >
+            </div>
+          </div>
+          <div class="col-span-1 flex justify-center">
+            <div class="flex items-center">
+              <i
+                class="fas fa-robot text-5xl text-red-500 mr-3 animate-float"
+                style="animation-delay: 1.5s"
+              ></i>
+              <span class="text-lg font-medium text-gray-900 dark:text-white"
+                >Gemini</span
+              >
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Scroll to Top Button -->
+    <div
+      class="scroll-indicator ripple"
+      onclick="window.scrollTo({top: 0, behavior: 'smooth'})"
+    >
+      <i class="fas fa-arrow-up"></i>
+    </div>
+
+    <script>
+      // Theme toggle functionality
+      const themeToggle = document.getElementById("theme-toggle");
+      const html = document.documentElement;
+
+      themeToggle.addEventListener("click", () => {
+        html.classList.toggle("dark");
+        localStorage.setItem(
+          "theme",
+          html.classList.contains("dark") ? "dark" : "light"
+        );
+      });
+
+      // Check for saved theme preference
+      if (
+        localStorage.getItem("theme") === "dark" ||
+        (!localStorage.getItem("theme") &&
+          window.matchMedia("(prefers-color-scheme: dark)").matches)
+      ) {
+        html.classList.add("dark");
+      } else {
+        html.classList.remove("dark");
+      }
+
+      // Create additional swarm particles dynamically
+      document.addEventListener("DOMContentLoaded", () => {
+        const heroSection = document.querySelector(
+          ".lg\\:absolute.lg\\:inset-y-0.lg\\:right-0.lg\\:w-1\\/2"
+        );
+        if (heroSection) {
+          for (let i = 0; i < 10; i++) {
+            const particle = document.createElement("div");
+            particle.className = "swarm-particle";
+            particle.style.width = `${Math.random() * 6 + 2}px`;
+            particle.style.height = particle.style.width;
+            particle.style.top = `${Math.random() * 100}%`;
+            particle.style.left = `${Math.random() * 100}%`;
+            particle.style.animationDelay = `${Math.random() * 10}s`;
+
+            // Randomly assign a color class
+            const colors = [
+              "bg-primary-light",
+              "bg-secondary-light",
+              "bg-accent-light",
+              "bg-primary-dark",
+              "bg-secondary-dark",
+              "bg-accent-dark",
+            ];
+            const color = colors[Math.floor(Math.random() * colors.length)];
+            particle.classList.add(color);
+
+            heroSection.appendChild(particle);
+          }
+        }
+
+        // Scroll progress indicator
+        window.addEventListener("scroll", () => {
+          const scrollTop =
+            document.documentElement.scrollTop || document.body.scrollTop;
+          const scrollHeight =
+            document.documentElement.scrollHeight -
+            document.documentElement.clientHeight;
+          const scrollProgress = (scrollTop / scrollHeight) * 100;
+          document.querySelector(".scroll-progress").style.width =
+            scrollProgress + "%";
+
+          // Show/hide scroll to top button
+          const scrollIndicator = document.querySelector(".scroll-indicator");
+          if (scrollTop > 300) {
+            scrollIndicator.classList.add("visible");
+          } else {
+            scrollIndicator.classList.remove("visible");
+          }
+
+          // Update timeline progress
+          const timelineProgress = Math.min(scrollTop / 3000, 1) * 100;
+          document.querySelector(".progress-bar").style.width =
+            timelineProgress + "%";
+        });
+
+        // Ripple effect for buttons
+        document.querySelectorAll(".ripple").forEach((button) => {
+          button.addEventListener("click", function (e) {
+            const rect = this.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            const ripple = document.createElement("span");
+            ripple.className = "ripple-effect";
+            ripple.style.left = x + "px";
+            ripple.style.top = y + "px";
+
+            this.appendChild(ripple);
+
+            setTimeout(() => {
+              ripple.remove();
+            }, 600);
+          });
+        });
+
+        // Confetti effect for demo button
+        document
+          .querySelector('button[class*="Try Demo"]')
+          .addEventListener("click", function () {
+            for (let i = 0; i < 50; i++) {
+              const confetti = document.createElement("div");
+              confetti.className = "confetti";
+              confetti.style.left = Math.random() * 100 + "vw";
+              confetti.style.backgroundColor = `hsl(${
+                Math.random() * 360
+              }, 100%, 50%)`;
+              confetti.style.animationDuration = Math.random() * 3 + 2 + "s";
+              document.body.appendChild(confetti);
+
+              setTimeout(() => {
+                confetti.remove();
+              }, 5000);
+            }
+          });
+
+        // Floating label functionality
+        document
+          .querySelectorAll(".floating-label input, .floating-label textarea")
+          .forEach((input) => {
+            input.addEventListener("focus", () => {
+              input.nextElementSibling.classList.add("active");
+            });
+
+            input.addEventListener("blur", () => {
+              if (!input.value) {
+                input.nextElementSibling.classList.remove("active");
+              }
+            });
+
+            // Initialize if already has value
+            if (input.value) {
+              input.nextElementSibling.classList.add("active");
+            }
+          });
+
+        // Contact form dark mode toggle
+        const contactDarkMode = document.getElementById("contact-dark-mode");
+        contactDarkMode.addEventListener("change", () => {
+          const contactSection = document.getElementById("contact");
+          if (contactDarkMode.checked) {
+            contactSection.classList.add("dark");
+          } else {
+            contactSection.classList.remove("dark");
+          }
+        });
+      });
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const slideshow = document.getElementById("hero-slideshow");
+        const slides = slideshow.querySelectorAll(".hero-slide");
+        let currentSlide = 0;
+
+        function showNextSlide() {
+          slides[currentSlide].classList.remove("active");
+          currentSlide = (currentSlide + 1) % slides.length;
+          slides[currentSlide].classList.add("active");
+        }
+
+        // Change slide every 7 seconds
+        setInterval(showNextSlide, 3000);
+      });
+    </script>
+  </body>
+</html>

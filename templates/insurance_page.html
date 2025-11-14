@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en" class="">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MultiDom RAG - Insurance</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: { dark: "#579be8", light: "#3B82F6" },
+              secondary: { dark: "#9F1239", light: "#EC4899" },
+              accent: { dark: "#047857", light: "#10B981" },
+              dark: { 900: "#0F172A", 800: "#1E293B", 700: "#334155" },
+            },
+            fontFamily: { sans: ["Inter", "sans-serif"] },
+            animation: {
+              float: "float 6s ease-in-out infinite",
+              "spin-slow": "spin 10s linear infinite",
+            },
+            keyframes: {
+              float: {
+                "0%, 100%": { transform: "translateY(0)" },
+                "50%": { transform: "translateY(-10px)" },
+              },
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap");
+      body {
+        font-family: "Inter", sans-serif;
+        scroll-behavior: smooth;
+      }
+      details > summary {
+        list-style: none;
+      }
+      details > summary::-webkit-details-marker {
+        display: none;
+      }
+      details > summary::before {
+        content: "\f078";
+        font-family: "Font Awesome 6 Free";
+        font-weight: 900;
+        margin-right: 0.5rem;
+        display: inline-block;
+        transition: transform 0.2s ease-in-out;
+      }
+      details[open] > summary::before {
+        transform: rotate(-180deg);
+      }
+      .scroll-progress {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 0%;
+        height: 4px;
+        background: linear-gradient(90deg, #3b82f6, #ec4899, #10b981);
+        z-index: 1000;
+        transition: width 0.1s;
+      }
+      .ripple {
+        position: relative;
+        overflow: hidden;
+      }
+      .ripple-effect {
+        position: absolute;
+        border-radius: 50%;
+        background-color: rgba(255, 255, 255, 0.4);
+        transform: scale(0);
+        animation: ripple 0.6s linear;
+        pointer-events: none;
+      }
+      @keyframes ripple {
+        to {
+          transform: scale(4);
+          opacity: 0;
+        }
+      }
+    </style>
+  </head>
+  <body
+    class="bg-gray-50 dark:bg-dark-900 text-gray-800 dark:text-gray-200"
+    id="insurance_page"
+  >
+    <div class="scroll-progress"></div>
+    <nav class="bg-white dark:bg-dark-800 shadow-lg sticky top-0 z-40">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between h-16 items-center">
+          <div class="flex items-center">
+            <i
+              class="fa-solid fa-file-medical text-amber-400 dark:text-amber-400 text-2xl mr-5"
+            ></i>
+            <span class="text-2xl font-bold text-amber-400 dark:text-amber-400"
+              >MultiDom RAG</span
+            >
+          </div>
+          <div class="hidden sm:flex flex-1 justify-center space-x-8">
+            <a
+              href="{{ url_for('homePage') }}"
+              class="border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 inline-flex items-center px-1 pt-1 border-b-2 text-xl hover:animate-pulse"
+              >Home</a
+            >
+            <div class="relative group">
+              <button
+                class="border-amber-400 dark:border-amber-400 text-gray-900 dark:text-white inline-flex items-center px-1 pt-1 border-b-2 text-xl border-b-2"
+              >
+                Demo
+                <svg
+                  class="w-4 h-4 ml-1"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M19 9l-7 7-7-7"
+                  ></path>
+                </svg>
+              </button>
+              <div
+                class="absolute left-1/2 transform -translate-x-1/2 mt-2 w-52 rounded-md shadow-lg bg-white dark:bg-dark-700 ring-1 ring-black ring-opacity-5 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50"
+              >
+                <div class="py-1">
+                  <a
+                    href="{{ url_for('medical_page') }}"
+                    class="block px-4 py-2 text-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-dark-600"
+                    >Medical</a
+                  >
+                  <a
+                    href="{{ url_for('islamic_page') }}"
+                    class="block px-4 py-2 text-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-dark-600"
+                    >Islamic</a
+                  >
+                  <a
+                    href="{{ url_for('insurance_page') }}"
+                    class="block px-4 py-2 text-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-dark-600 font-semibold"
+                    >Insurance (Active)</a
+                  >
+                </div>
+              </div>
+            </div>
+            <a
+              href="{{ url_for('about') }}"
+              class="border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 inline-flex items-center px-1 pt-1 border-b-2 text-xl hover:animate-pulse"
+              >About</a
+            >
+          </div>
+          <div class="hidden sm:flex items-center space-x-4">
+            <a
+              href="{{ url_for('clear_insurance_chat') }}"
+              class="p-2 text-red-500 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-700 rounded-full transition-colors"
+              title="Clear Chat History"
+            >
+              <i class="fas fa-trash-alt"></i>
+            </a>
+            <button
+              id="theme-toggle"
+              type="button"
+              class="p-1 rounded-full text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-light dark:focus:ring-primary-dark ripple"
+            >
+              <i class="fas fa-moon dark:hidden"></i
+              ><i class="fas fa-sun hidden dark:block"></i>
+            </button>
+            <a
+              class="ml-4 bg-amber-400 dark:bg-amber-400 text-white text-md px-6 py-2 rounded-md font-medium"
+              >Insurance</a
+            >
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div
+        id="chat-history"
+        class="max-w-5xl mx-auto px-4 py-8 pt-12 pb-40 space-y-8"
+      >
+        {% if not history %}
+        <div class="text-center py-10">
+          <i
+            class="fa-solid fa-shield-halved text-amber-400 dark:text-amber-400 text-6xl mb-4 animate-float"
+          ></i>
+          <h2 class="text-3xl font-bold text-gray-800 dark:text-white mb-2">
+            Insurance Assistant (RAG)
+          </h2>
+          <p class="text-lg text-gray-500 dark:text-gray-400">
+            Ask a question about Etiqa Takaful (Motor & Car policies).
+          </p>
+        </div>
+        {% endif %} {% for chat in history[:-1] %} {% if chat.type == 'human' %}
+        <div class="flex justify-end w-full">
+          <div
+            class="bg-amber-400 text-white p-4 rounded-xl shadow-md max-w-2xl"
+          >
+            <p>
+              {{ chat.content if chat.content is string else
+              chat.content.content }}
+            </p>
+          </div>
+        </div>
+
+        {% elif chat.type == 'ai' %}
+        <div class="w-full max-w-2xl space-y-4">
+          <div>
+            <div
+              class="flex items-center text-sm text-gray-800 dark:text-white mb-2 ml-1"
+            >
+              <i
+                class="fa-solid fa-file-medical text-amber-400 dark:text-amber-400 mr-2"
+              ></i>
+              <strong class="font-semibold">MultiDom RAG</strong>
+            </div>
+            <div
+              class="bg-white dark:bg-dark-700 border dark:border-dark-600 rounded-xl shadow-md p-5"
+            >
+              <p
+                class="text-gray-800 dark:text-white whitespace-pre-wrap text-left"
+              >
+                {{ chat.content|safe }}
+              </p>
+            </div>
+          </div>
+        </div>
+        {% endif %} {% endfor %} {% if answer %}
+        <div class="w-full max-w-2xl space-y-4">
+          <details class="w-full">
+            <summary
+              class="flex items-center text-sm text-gray-500 dark:text-gray-400 cursor-pointer mb-2 ml-1"
+            >
+              <i
+                class="fas fa-atom mr-2 animate-spin-slow text-amber-400 inline-block"
+              ></i>
+              <span>Thinking... view source & thoughts...</span>
+            </summary>
+            <div
+              class="bg-gray-100 dark:bg-dark-800 border dark:border-dark-700 rounded-xl shadow p-4 space-y-4 ml-1 mt-2"
+            >
+              {% if source %}
+              <div>
+                <h4 class="font-semibold text-gray-700 dark:text-gray-300">
+                  Source:
+                </h4>
+                <p class="text-sm text-gray-600 dark:text-gray-400">
+                  {{ source }}
+                </p>
+              </div>
+              {% endif %} {% if thoughts %}
+              <details>
+                <summary
+                  class="font-semibold text-medium text-gray-700 dark:text-gray-400 cursor-pointer"
+                >
+                  View Agent Thoughts (ReAct Process):
+                </summary>
+                <p
+                  class="text-sm mt-2 p-2 bg-gray-200 dark:bg-dark-900 rounded whitespace-pre-line"
+                >
+                  {{ thoughts | safe }}
+                </p>
+              </details>
+              {% endif %} {% if validation %}
+              <div>
+                <h4 class="font-semibold text-gray-700 dark:text-gray-300">
+                  Validation:
+                </h4>
+                <p class="text-sm text-gray-600 dark:text-gray-400">
+                  {{ validation[1] }}
+                  <!-- Display the text part of the tuple -->
+                </p>
+              </div>
+              {% endif %}
+            </div>
+          </details>
+
+          <div>
+            <div
+              class="flex items-center text-sm text-gray-800 dark:text-white mb-2 ml-1"
+            >
+              <i
+                class="fa-solid fa-file-medical text-amber-400 dark:text-amber-400 mr-2"
+              ></i>
+              <strong class="font-semibold">MultiDom RAG</strong>
+            </div>
+            <div
+              class="bg-white dark:bg-dark-700 border dark:border-dark-600 rounded-xl shadow-md p-5"
+            >
+              <p
+                class="text-gray-800 dark:text-white text-left whitespace-pre-line"
+              >
+                {{ answer|safe }}
+              </p>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </main>
+
+    <footer
+      class="fixed bottom-0 left-0 w-full z-20 bg-white/80 dark:bg-dark-900/80 backdrop-blur-sm border-t dark:border-dark-700"
+    >
+      <form
+        method="POST"
+        action="{{ url_for('insurance_page') }}"
+        enctype="multipart/form-data"
+        class="relative max-w-5xl mx-auto flex items-center space-x-3 p-4"
+      >
+        <input
+          type="text"
+          id="query"
+          name="query"
+          required
+          class="flex-1 px-4 py-3 rounded-lg bg-gray-100 dark:bg-dark-700 border border-gray-300 dark:border-dark-600 focus:outline-none focus:ring-2 focus:ring-amber-400"
+          placeholder="Ask about Etiqa Motor & Car Takaful..."
+        />
+        <button
+          type="submit"
+          class="p-3 bg-amber-400 hover:bg-accent-light text-white rounded-full transition-colors shadow-lg hover:scale-105 transform ripple"
+        >
+          <i class="fas fa-paper-plane"></i>
+        </button>
+      </form>
+    </footer>
+
+    <script>
+      const themeToggle = document.getElementById("theme-toggle"),
+        html = document.documentElement;
+      themeToggle.addEventListener("click", () => {
+        html.classList.toggle("dark");
+        localStorage.setItem(
+          "theme",
+          html.classList.contains("dark") ? "dark" : "light"
+        );
+      });
+      if (
+        localStorage.getItem("theme") === "dark" ||
+        (!localStorage.getItem("theme") &&
+          window.matchMedia("(prefers-color-scheme: dark)").matches)
+      ) {
+        html.classList.add("dark");
+      }
+
+      document.addEventListener("DOMContentLoaded", () => {
+        window.addEventListener("scroll", () => {
+          const scrollTop =
+            document.documentElement.scrollTop || document.body.scrollTop;
+          const scrollHeight =
+            document.documentElement.scrollHeight -
+            document.documentElement.clientHeight;
+          const scrollProgress =
+            scrollHeight > 0 ? (scrollTop / scrollHeight) * 100 : 0;
+          const progressBar = document.querySelector(".scroll-progress");
+          if (progressBar) progressBar.style.width = scrollProgress + "%";
+        });
+        document.querySelectorAll(".ripple").forEach((button) => {
+          button.addEventListener("click", function (e) {
+            const rect = this.getBoundingClientRect(),
+              x = e.clientX - rect.left,
+              y = e.clientY - rect.top;
+            const ripple = document.createElement("span");
+            ripple.className = "ripple-effect";
+            ripple.style.left = x + "px";
+            ripple.style.top = y + "px";
+            this.appendChild(ripple);
+            setTimeout(() => {
+              ripple.remove();
+            }, 600);
+          });
+        });
+
+        // --- All JavaScript related to upload button, menu, and file inputs has been removed ---
+
+        // Scroll to bottom on load
+        setTimeout(() => {
+          const chatHistoryDiv = document.getElementById("chat-history");
+          if (chatHistoryDiv) {
+            window.scrollTo({
+              top: chatHistoryDiv.scrollHeight,
+              behavior: "smooth",
+            });
+          }
+        }, 100);
+      });
+    </script>
+  </body>
+</html>
