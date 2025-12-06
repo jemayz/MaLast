@@ -314,22 +314,88 @@
         method="POST"
         action="{{ url_for('insurance_page') }}"
         enctype="multipart/form-data"
-        class="relative max-w-5xl mx-auto flex items-center space-x-3 p-4"
+        class="relative max-w-5xl mx-auto px-4 py-3"
       >
-        <input
-          type="text"
-          id="query"
-          name="query"
-          required
-          class="flex-1 px-4 py-3 rounded-lg bg-gray-100 dark:bg-dark-700 border border-gray-300 dark:border-dark-600 focus:outline-none focus:ring-2 focus:ring-amber-400"
-          placeholder="Ask about Etiqa Motor & Car Takaful..."
-        />
-        <button
-          type="submit"
-          class="p-3 bg-amber-400 hover:bg-accent-light text-white rounded-full transition-colors shadow-lg hover:scale-105 transform ripple"
+        <!-- Popup Menu for Upload -->
+        <div
+          id="upload-menu"
+          class="absolute bottom-20 left-4 w-52 bg-white dark:bg-dark-700 border dark:border-dark-600 rounded-lg shadow-lg py-2 z-10 hidden"
         >
-          <i class="fas fa-paper-plane"></i>
-        </button>
+          <button
+            type="button"
+            id="upload-image-btn"
+            class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-dark-600 flex items-center"
+          >
+            <i class="fas fa-image mr-3"></i> Upload Image
+          </button>
+        </div>
+        <input type="file" id="file-upload" name="image" class="hidden" />
+
+        <!-- Input Container -->
+        <div class="relative flex items-center">
+          <!-- Left Icon: Upload Toggle (Inside Input) -->
+          <button
+            type="button"
+            id="upload-toggle"
+            class="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400 hover:text-amber-500 transition-colors z-10"
+            title="Add File"
+          >
+            <i class="fas fa-plus text-lg"></i>
+          </button>
+
+          <!-- Main Input Field (Padded for Icons) -->
+          <input
+            type="text"
+            id="query"
+            name="query"
+            required
+            class="w-full pl-12 pr-40 py-4 rounded-full bg-gray-100 dark:bg-dark-700 border border-gray-300 dark:border-dark-600 focus:outline-none focus:ring-2 focus:ring-amber-400 shadow-sm"
+            placeholder="Ask about Etiqa Motor & Car Takaful..."
+          />
+
+          <!-- Right Group: Lang + Mic + Submit (Inside Input) -->
+          <div
+            class="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center space-x-1"
+          >
+            <!-- Language Select -->
+            <select
+              id="language-select"
+              class="minimal-select text-xs font-bold text-gray-500 dark:text-gray-400 bg-transparent border-none focus:ring-0 cursor-pointer outline-none hover:text-amber-400 transition-colors uppercase p-1"
+              title="Select Language"
+            >
+              <option value="en-US">EN</option>
+              <option value="ms-MY">MS</option>
+              <option value="ar-SA">AR</option>
+            </select>
+
+            <!-- Vertical Separator -->
+            <div class="h-6 w-px bg-gray-300 dark:bg-gray-600 mx-1"></div>
+
+            <!-- Mic Button -->
+            <button
+              type="button"
+              id="voice-btn"
+              class="p-2 text-gray-500 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors rounded-full ripple"
+              title="Speak"
+            >
+              <i class="fas fa-microphone text-lg"></i>
+            </button>
+
+            <!-- Submit Button -->
+            <button
+              type="submit"
+              class="p-2.5 bg-amber-400 hover:bg-amber-400 text-white rounded-full transition-colors shadow-md hover:scale-105 transform ripple ml-1"
+            >
+              <i class="fas fa-paper-plane text-sm"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- File Name Display (Optional Feedback) -->
+        <div
+          id="file-name-display"
+          class="hidden absolute -top-8 left-4 text-xs bg-gray-800 text-white px-2 py-1 rounded shadow"
+        ></div>
       </form>
     </footer>
 
@@ -379,7 +445,123 @@
           });
         });
 
-        // --- All JavaScript related to upload button, menu, and file inputs has been removed ---
+        // --- File Upload Logic ---
+        const uploadToggle = document.getElementById("upload-toggle");
+        const uploadMenu = document.getElementById("upload-menu");
+        const uploadImageBtn = document.getElementById("upload-image-btn");
+        const fileInput = document.getElementById("file-upload");
+        const fileNameDisplay = document.getElementById("file-name-display");
+
+        // Toggle menu
+        uploadToggle.addEventListener("click", (e) => {
+          e.stopPropagation();
+          uploadMenu.classList.toggle("hidden");
+        });
+
+        // Close menu when clicking outside
+        document.addEventListener("click", (e) => {
+          if (!uploadMenu.contains(e.target) && e.target !== uploadToggle) {
+            uploadMenu.classList.add("hidden");
+          }
+        });
+
+        // Trigger file input
+        uploadImageBtn.addEventListener("click", () => {
+          fileInput.click();
+          uploadMenu.classList.add("hidden");
+        });
+
+        // Handle file selection
+        fileInput.addEventListener("change", () => {
+          if (fileInput.files.length > 0) {
+            const fileName = fileInput.files[0].name;
+            fileNameDisplay.textContent = "Attached: " + fileName;
+            fileNameDisplay.classList.remove("hidden");
+            uploadToggle.classList.add("text-green-500");
+          } else {
+            fileNameDisplay.classList.add("hidden");
+            uploadToggle.classList.remove("text-green-500");
+          }
+        });
+
+        // --- Voice to Text Logic ---
+        const voiceBtn = document.getElementById("voice-btn");
+        const queryInput = document.getElementById("query");
+        const voiceIcon = voiceBtn.querySelector("i");
+        const languageSelect = document.getElementById("language-select");
+
+        if (
+          "webkitSpeechRecognition" in window ||
+          "SpeechRecognition" in window
+        ) {
+          const SpeechRecognition =
+            window.SpeechRecognition || window.webkitSpeechRecognition;
+          const recognition = new SpeechRecognition();
+
+          recognition.continuous = false; // Stop after one sentence/phrase
+          recognition.interimResults = false; // Only show final results
+
+          voiceBtn.addEventListener("click", () => {
+            if (voiceBtn.classList.contains("listening")) {
+              recognition.stop();
+            } else {
+              // Set language based on dropdown selection
+              recognition.lang = languageSelect.value;
+              recognition.start();
+            }
+          });
+
+          recognition.onstart = () => {
+            voiceBtn.classList.add(
+              "listening",
+              "text-red-500",
+              "animate-pulse-fast"
+            );
+            voiceIcon.classList.remove("fa-microphone");
+            voiceIcon.classList.add("fa-stop-circle");
+
+            // Update placeholder based on language
+            const lang = languageSelect.value;
+            if (lang === "ms-MY")
+              queryInput.placeholder = "Sedang mendengar...";
+            else if (lang === "ar-SA")
+              queryInput.placeholder = "جاري الاستماع...";
+            else queryInput.placeholder = "Listening...";
+          };
+
+          recognition.onend = () => {
+            voiceBtn.classList.remove(
+              "listening",
+              "text-red-500",
+              "animate-pulse-fast"
+            );
+            voiceIcon.classList.add("fa-microphone");
+            voiceIcon.classList.remove("fa-stop-circle");
+            queryInput.placeholder = "Ask about Etiqa Motor & Car Takaful...";
+          };
+
+          recognition.onresult = (event) => {
+            const transcript = event.results[0][0].transcript;
+            queryInput.value = transcript;
+            // Optional: Automatically submit after speaking
+            document.querySelector("form").submit();
+          };
+
+          recognition.onerror = (event) => {
+            console.error("Speech recognition error", event.error);
+            voiceBtn.classList.remove(
+              "listening",
+              "text-red-500",
+              "animate-pulse-fast"
+            );
+            queryInput.placeholder = "Error hearing voice. Try again.";
+          };
+        } else {
+          // Hide button if browser doesn't support speech recognition
+          voiceBtn.style.display = "none";
+          languageSelect.style.display = "none";
+          console.warn("Web Speech API not supported in this browser.");
+        }
 
         // Scroll to bottom on load
         setTimeout(() => {

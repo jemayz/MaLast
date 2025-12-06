@@ -24,6 +24,7 @@
             animation: {
               float: "float 6s ease-in-out infinite",
               "spin-slow": "spin 10s linear infinite",
+              "pulse-fast": "pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite",
             },
             keyframes: {
               float: {
@@ -85,6 +86,17 @@
           transform: scale(4);
           opacity: 0;
         }
+      }
+      /* Hide default arrow for select but keep functionality */
+      select.minimal-select {
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        appearance: none;
+        text-align: center;
+        background-image: none;
+      }
+      select.minimal-select::-ms-expand {
+        display: none;
       }
     </style>
   </head>
@@ -320,11 +332,12 @@
         method="POST"
         action="{{ url_for('medical_page') }}"
         enctype="multipart/form-data"
-        class="relative max-w-5xl mx-auto flex items-center space-x-3 p-4"
+        class="relative max-w-5xl mx-auto px-4 py-3"
       >
+        <!-- Popup Menu for Upload (Has both Image and Doc options) -->
         <div
           id="upload-menu"
-          class="absolute bottom-20 left-0 w-52 bg-white dark:bg-dark-700 border dark:border-dark-600 rounded-lg shadow-lg py-2 z-10 hidden"
+          class="absolute bottom-20 left-4 w-52 bg-white dark:bg-dark-700 border dark:border-dark-600 rounded-lg shadow-lg py-2 z-10 hidden"
         >
           <button
             type="button"
@@ -341,36 +354,76 @@
             <i class="fas fa-file-alt mr-3"></i> Upload Document
           </button>
         </div>
-        <button
-          type="button"
-          id="upload-toggle"
-          class="p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-dark-700 rounded-full transition-colors"
-        >
-          <i class="fas fa-plus text-xl"></i>
-        </button>
+
+        <!-- Hidden Inputs -->
         <input type="file" id="file-upload" name="image" class="hidden" />
-        <!-- Renamed to image/document to match Python-->
         <input type="file" id="doc-upload" name="document" class="hidden" />
-        <!-- Added hidden doc input -->
-        <input
-          type="text"
-          id="query"
-          name="query"
-          required
-          class="flex-1 px-4 py-3 rounded-lg bg-gray-100 dark:bg-dark-700 border border-gray-300 dark:border-dark-600 focus:outline-none focus:ring-2 focus:ring-primary-light"
-          placeholder="Ask a medical question or include an upload..."
-        />
-        <span
+
+        <!-- Input Container -->
+        <div class="relative flex items-center">
+          <!-- Left Icon: Upload Toggle (Inside Input) -->
+          <button
+            type="button"
+            id="upload-toggle"
+            class="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400 hover:text-primary-light transition-colors z-10"
+            title="Add File"
+          >
+            <i class="fas fa-plus text-lg"></i>
+          </button>
+
+          <!-- Main Input Field (Padded for Icons) -->
+          <input
+            type="text"
+            id="query"
+            name="query"
+            required
+            class="w-full pl-12 pr-40 py-4 rounded-full bg-gray-100 dark:bg-dark-700 border border-gray-300 dark:border-dark-600 focus:outline-none focus:ring-2 focus:ring-primary-light shadow-sm"
+            placeholder="Ask a medical question..."
+          />
+
+          <!-- Right Group: Lang + Mic + Submit (Inside Input) -->
+          <div
+            class="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center space-x-1"
+          >
+            <!-- Language Select -->
+            <select
+              id="language-select"
+              class="minimal-select text-xs font-bold text-gray-500 dark:text-gray-400 bg-transparent border-none focus:ring-0 cursor-pointer outline-none hover:text-primary-light transition-colors uppercase p-1"
+              title="Select Language"
+            >
+              <option value="en-US">EN</option>
+              <option value="ms-MY">MS</option>
+              <option value="ar-SA">AR</option>
+            </select>
+
+            <!-- Vertical Separator -->
+            <div class="h-6 w-px bg-gray-300 dark:bg-gray-600 mx-1"></div>
+
+            <!-- Mic Button -->
+            <button
+              type="button"
+              id="voice-btn"
+              class="p-2 text-gray-500 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors rounded-full ripple"
+              title="Speak"
+            >
+              <i class="fas fa-microphone text-lg"></i>
+            </button>
+
+            <!-- Submit Button -->
+            <button
+              type="submit"
+              class="p-2.5 bg-primary-light hover:bg-primary-dark text-white rounded-full transition-colors shadow-md hover:scale-105 transform ripple ml-1"
+            >
+              <i class="fas fa-paper-plane text-sm"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- File Name Display (Optional Feedback) -->
+        <div
           id="file-name-display"
-          class="text-sm text-gray-500 dark:text-gray-400 truncate max-w-xs"
-          title=""
-        ></span>
-        <button
-          type="submit"
-          class="p-3 bg-primary-light hover:bg-primary-dark text-white rounded-full transition-colors shadow-lg hover:scale-105 transform ripple"
-        >
-          <i class="fas fa-paper-plane"></i>
-        </button>
+          class="hidden absolute -top-8 left-4 text-xs bg-gray-800 text-white px-2 py-1 rounded shadow"
+        ></div>
       </form>
     </footer>
 
@@ -393,6 +446,7 @@
       }
 
       document.addEventListener("DOMContentLoaded", () => {
+        // Scroll Progress & Ripple Effects
         window.addEventListener("scroll", () => {
           const scrollTop =
             document.documentElement.scrollTop || document.body.scrollTop;
@@ -434,15 +488,29 @@
           fileUploadInput.value = null;
           docUploadInput.value = null;
           fileNameDisplay.textContent = "";
-          fileNameDisplay.title = "";
+          fileNameDisplay.classList.add("hidden");
+          uploadToggle.classList.remove("text-green-500");
         };
 
+        // Toggle menu
         if (uploadToggle)
           uploadToggle.addEventListener("click", (e) => {
             e.stopPropagation();
             uploadMenu.classList.toggle("hidden");
           });
 
+        // Close menu when clicking outside
+        document.addEventListener("click", (e) => {
+          if (
+            uploadMenu &&
+            !uploadMenu.classList.contains("hidden") &&
+            !uploadToggle.contains(e.target)
+          ) {
+            uploadMenu.classList.add("hidden");
+          }
+        });
+
+        // Handle Image Upload Click
         if (uploadImageBtn)
           uploadImageBtn.addEventListener("click", () => {
             clearFileInputs();
@@ -451,6 +519,7 @@
             uploadMenu.classList.add("hidden");
           });
 
+        // Handle Doc Upload Click
         if (uploadDocBtn)
           uploadDocBtn.addEventListener("click", () => {
             clearFileInputs();
@@ -464,9 +533,10 @@
           fileUploadInput.addEventListener("change", () => {
             const file = fileUploadInput.files[0];
             if (file) {
-              fileNameDisplay.textContent = file.name;
-              fileNameDisplay.title = file.name;
-              docUploadInput.value = null; // Ensure the other input is cleared
+              fileNameDisplay.textContent = "Image: " + file.name;
+              fileNameDisplay.classList.remove("hidden");
+              uploadToggle.classList.add("text-green-500");
+              docUploadInput.value = null;
             }
           });
 
@@ -475,21 +545,87 @@
           docUploadInput.addEventListener("change", () => {
             const file = docUploadInput.files[0];
             if (file) {
-              fileNameDisplay.textContent = file.name;
-              fileNameDisplay.title = file.name;
-              fileUploadInput.value = null; // Ensure the other input is cleared
+              fileNameDisplay.textContent = "Doc: " + file.name;
+              fileNameDisplay.classList.remove("hidden");
+              uploadToggle.classList.add("text-green-500");
+              fileUploadInput.value = null;
             }
           });
 
-        document.addEventListener("click", (e) => {
-          if (
-            uploadMenu &&
-            !uploadMenu.classList.contains("hidden") &&
-            !uploadToggle.contains(e.target)
-          ) {
-            uploadMenu.classList.add("hidden");
-          }
-        });
+        // --- Voice to Text Logic ---
+        const voiceBtn = document.getElementById("voice-btn");
+        const queryInput = document.getElementById("query");
+        const voiceIcon = voiceBtn.querySelector("i");
+        const languageSelect = document.getElementById("language-select");
+
+        if (
+          "webkitSpeechRecognition" in window ||
+          "SpeechRecognition" in window
+        ) {
+          const SpeechRecognition =
+            window.SpeechRecognition || window.webkitSpeechRecognition;
+          const recognition = new SpeechRecognition();
+
+          recognition.continuous = false; // Stop after one sentence/phrase
+          recognition.interimResults = false; // Only show final results
+
+          voiceBtn.addEventListener("click", () => {
+            if (voiceBtn.classList.contains("listening")) {
+              recognition.stop();
+            } else {
+              recognition.lang = languageSelect.value;
+              recognition.start();
+            }
+          });
+
+          recognition.onstart = () => {
+            voiceBtn.classList.add(
+              "listening",
+              "text-red-500",
+              "animate-pulse-fast"
+            );
+            voiceIcon.classList.remove("fa-microphone");
+            voiceIcon.classList.add("fa-stop-circle");
+
+            const lang = languageSelect.value;
+            if (lang === "ms-MY")
+              queryInput.placeholder = "Sedang mendengar...";
+            else if (lang === "ar-SA")
+              queryInput.placeholder = "جاري الاستماع...";
+            else queryInput.placeholder = "Listening...";
+          };
+
+          recognition.onend = () => {
+            voiceBtn.classList.remove(
+              "listening",
+              "text-red-500",
+              "animate-pulse-fast"
+            );
+            voiceIcon.classList.add("fa-microphone");
+            voiceIcon.classList.remove("fa-stop-circle");
+            queryInput.placeholder = "Ask a medical question...";
+          };
+
+          recognition.onresult = (event) => {
+            const transcript = event.results[0][0].transcript;
+            queryInput.value = transcript;
+            // Optional: Automatically submit after speaking
+            document.querySelector("form").submit();
+          };
+
+          recognition.onerror = (event) => {
+            console.error("Speech recognition error", event.error);
+            voiceBtn.classList.remove(
+              "listening",
+              "text-red-500",
+              "animate-pulse-fast"
+            );
+            queryInput.placeholder = "Error hearing voice. Try again.";
+          };
+        } else {
+          voiceBtn.style.display = "none";
+          languageSelect.style.display = "none";
+        }
 
         // Scroll to bottom on load
         setTimeout(() => {
